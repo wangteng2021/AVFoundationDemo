@@ -8,10 +8,14 @@
 #import "ViewController.h"
 #import <AVKit/AVKit.h>
 #import "WTPhotoCollectionViewCell.h"
-
+#import <MediaPlayer/MediaPlayer.h>
 @interface ViewController ()<UICollectionViewDelegate,UICollectionViewDataSource>
 
 @property(nonatomic,strong) UIImageView *imageView;
+
+@property (nonatomic,strong) AVPlayer *player;
+
+@property (nonatomic,strong) AVPlayerLayer *playerLayer;
 
 @property(nonatomic,strong) UICollectionView *collectionView;
 
@@ -27,15 +31,15 @@
     
     /// UI
     self.imageView = ({
-       
-        UIImageView *imageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, self.view.frame.size.height - 200)];
+        
+        UIImageView *imageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width / 2.0, self.view.frame.size.height - 200)];
         imageView.contentMode = UIViewContentModeScaleAspectFit;
         [self.view addSubview:imageView];
         imageView;
     });
-    
+    [self.view.layer addSublayer:self.playerLayer];
     self.collectionView = ({
-       
+        
         UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc] init];
         layout.itemSize = CGSizeMake(100, 180);
         layout.scrollDirection = UICollectionViewScrollDirectionHorizontal;
@@ -58,16 +62,16 @@
     
     NSArray *keys = @[@"duration"];
     [asset loadValuesAsynchronouslyForKeys:keys completionHandler:^{
-       
+        
         NSError *error = nil;
         AVKeyValueStatus trackStatus = [asset statusOfValueForKey:@"duration" error:&error];
         switch (trackStatus) {
             case AVKeyValueStatusLoaded:
                 
-//                [self updateUserInterfaceForDuration];
+                //                [self updateUserInterfaceForDuration];
                 break;
             case AVKeyValueStatusFailed:
-//                [self reportError:error forAsset:asset];
+                //                [self reportError:error forAsset:asset];
                 break;
             case AVKeyValueStatusCancelled:
                 break;
@@ -100,6 +104,7 @@
         }
     }
     
+    /// 获取多张图片
     if ([asset tracksWithMediaType:AVMediaTypeVideo].count > 0) {
         AVAssetImageGenerator *imageGenerator = [AVAssetImageGenerator assetImageGeneratorWithAsset:asset];
         Float64 durationSeconds = CMTimeGetSeconds([asset duration]);
@@ -108,8 +113,8 @@
         CMTime third = CMTimeMakeWithSeconds(durationSeconds*4.0/3.0, 600);
         CMTime end = CMTimeMakeWithSeconds(durationSeconds, 600);
         NSArray *times = @[[NSValue valueWithCMTime:kCMTimeZero],
-                      [NSValue valueWithCMTime:firstThird], [NSValue valueWithCMTime:secondThird],
-                      [NSValue valueWithCMTime:third],[NSValue valueWithCMTime:end]];
+                           [NSValue valueWithCMTime:firstThird], [NSValue valueWithCMTime:secondThird],
+                           [NSValue valueWithCMTime:third],[NSValue valueWithCMTime:end]];
         [imageGenerator generateCGImagesAsynchronouslyForTimes:times completionHandler:^(CMTime requestedTime, CGImageRef  _Nullable image, CMTime actualTime, AVAssetImageGeneratorResult result, NSError * _Nullable error) {
             NSString *requestedTimeString = (NSString *)
             CFBridgingRelease(CMTimeCopyDescription(NULL, requestedTime));
@@ -135,6 +140,49 @@
             });
         }];
     }
+    
+    NSArray *compatiblePreset = [AVAssetExportSession exportPresetsCompatibleWithAsset:asset];
+    if ([compatiblePreset containsObject:AVAssetExportPresetLowQuality]) {
+        AVAssetExportSession *exportSession = [[AVAssetExportSession alloc] initWithAsset:asset presetName:AVAssetExportPresetLowQuality];
+        
+        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+
+        [formatter setDateFormat:@"YYYY-MM-dd HH:mm:ss"];
+        NSDate *date = [NSDate date];
+        NSString *currentTime = [formatter stringFromDate:date];
+        /// 缓存路径
+        NSURL *outUrl = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%@/Library/Caches/movie_%@.mp4",NSHomeDirectory(),currentTime]];
+        exportSession.outputURL = outUrl;
+        exportSession.outputFileType = AVFileTypeQuickTimeMovie;
+        
+        CMTime start = CMTimeMakeWithSeconds(1.0, 600);
+        CMTime duration = CMTimeMakeWithSeconds(5.0, 600);
+        CMTimeRange range = CMTimeRangeMake(start, duration);
+        exportSession.timeRange = range;
+        
+        /// 创建新文件导出
+        [exportSession exportAsynchronouslyWithCompletionHandler:^{
+            
+            switch ([exportSession status]) {
+                    
+                case AVAssetExportSessionStatusCompleted: {
+                    
+                    AVPlayerItem *item = [AVPlayerItem playerItemWithURL:outUrl];
+                    [self.player replaceCurrentItemWithPlayerItem:item];
+                    [self.player play];
+                    break;
+                }
+                case AVAssetExportSessionStatusFailed:
+                    NSLog(@"Export failed: %@", [[exportSession error] localizedDescription]);
+                    break;
+                case AVAssetExportSessionStatusCancelled:
+                    NSLog(@"Export canceled");
+                    break;
+                default:
+                    break;
+            }
+        }];
+    }
 }
 - (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section {
     
@@ -158,5 +206,21 @@
         _results = [NSMutableArray array];
     }
     return _results;
+}
+- (AVPlayer *)player {
+    
+    if (!_player) {
+        _player = [[AVPlayer alloc] init];
+    }
+    return _player;
+}
+- (AVPlayerLayer *)playerLayer {
+    if (!_playerLayer) {
+        _playerLayer = [[AVPlayerLayer alloc] init];
+        _playerLayer.player = self.player;
+        _playerLayer.frame = CGRectMake(self.view.frame.size.width / 2.0, 0, self.view.frame.size.width / 2.0, self.view.frame.size.height - 200);
+        _playerLayer.videoGravity = AVLayerVideoGravityResizeAspect;
+    }
+    return _playerLayer;
 }
 @end
