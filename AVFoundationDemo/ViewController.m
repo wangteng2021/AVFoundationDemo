@@ -21,6 +21,9 @@
 
 @property(nonatomic,strong) NSMutableArray *results;
 
+@property(nonatomic,copy) NSURL *outUrl;
+
+@property (nonatomic,copy) NSURL *originUrl;
 @end
 
 @implementation ViewController
@@ -50,6 +53,7 @@
         [self.view addSubview:collectionView];
         collectionView;
     });
+    [self.player addObserver:self forKeyPath:@"status" options:0 context:nil];
     [self getVideo];
 }
 
@@ -57,6 +61,7 @@
     
     NSString *path = [[NSBundle mainBundle] pathForResource:@"123" ofType:@"mp4"];
     NSURL *url = [NSURL fileURLWithPath:path];
+    self.originUrl = url;
     NSDictionary *options = @{AVURLAssetPreferPreciseDurationAndTimingKey:@YES};
     AVURLAsset *asset = [[AVURLAsset alloc] initWithURL:url options:options];
     
@@ -152,11 +157,12 @@
         NSString *currentTime = [formatter stringFromDate:date];
         /// 缓存路径
         NSURL *outUrl = [NSURL fileURLWithPath:[NSString stringWithFormat:@"%@/Library/Caches/movie_%@.mp4",NSHomeDirectory(),currentTime]];
+        self.outUrl = outUrl;
         exportSession.outputURL = outUrl;
         exportSession.outputFileType = AVFileTypeQuickTimeMovie;
         
         CMTime start = CMTimeMakeWithSeconds(1.0, 600);
-        CMTime duration = CMTimeMakeWithSeconds(5.0, 600);
+        CMTime duration = CMTimeMakeWithSeconds(20.0, 600);
         CMTimeRange range = CMTimeRangeMake(start, duration);
         exportSession.timeRange = range;
         
@@ -170,6 +176,14 @@
                     AVPlayerItem *item = [AVPlayerItem playerItemWithURL:outUrl];
                     [self.player replaceCurrentItemWithPlayerItem:item];
                     [self.player play];
+                    
+                    /// 重新定位播放头（快进）
+                    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(2.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                        CMTime fiveSecondsIn = CMTimeMake(5, 1);
+                        [self.player seekToTime:fiveSecondsIn toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+                    });
+                    
+                    [self editVideo];
                     break;
                 }
                 case AVAssetExportSessionStatusFailed:
@@ -183,6 +197,45 @@
             }
         }];
     }
+}
+- (void)editVideo {
+    AVMutableComposition *mutableComposition = [AVMutableComposition composition];
+    // Create the video composition track.
+    AVMutableCompositionTrack *mutableCompositionVideoTrack = [mutableComposition addMutableTrackWithMediaType:AVMediaTypeVideo preferredTrackID:kCMPersistentTrackID_Invalid];
+    // Create the audio composition track.
+    AVMutableCompositionTrack *mutableCompositionAudioTrack = [mutableComposition addMutableTrackWithMediaType:AVMediaTypeAudio preferredTrackID:kCMPersistentTrackID_Invalid];
+    
+    // You can retrieve AVAssets from a number of places, like the camera roll for example.
+    AVAsset *videoAsset = [AVAsset assetWithURL:self.outUrl];
+    AVAsset *anotherVideoAsset = [AVAsset assetWithURL:self.originUrl];
+    // Get the first video track from each asset.
+    AVAssetTrack *videoAssetTrack = [[videoAsset tracksWithMediaType:AVMediaTypeVideo] objectAtIndex:0];
+    AVAssetTrack *anotherVideoAssetTrack = [[anotherVideoAsset tracksWithMediaType:AVMediaTypeVideo] objectAtIndex:0];
+    
+    // Add them both to the composition.
+    [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero,videoAssetTrack.timeRange.duration) ofTrack:videoAssetTrack atTime:kCMTimeZero error:nil];
+    [mutableCompositionVideoTrack insertTimeRange:CMTimeRangeMake(kCMTimeZero,anotherVideoAssetTrack.timeRange.duration) ofTrack:anotherVideoAssetTrack atTime:videoAssetTrack.timeRange.duration error:nil];
+    
+    
+    /// 音频处理
+    AVMutableAudioMix *mutableAudioMix = [AVMutableAudioMix audioMix];
+    // Create the audio mix input parameters object.
+    AVMutableAudioMixInputParameters *mixParameters = [AVMutableAudioMixInputParameters audioMixInputParametersWithTrack:mutableCompositionAudioTrack];
+    // Set the volume ramp to slowly fade the audio out over the duration of the composition.
+    [mixParameters setVolumeRampFromStartVolume:1.f toEndVolume:0.f timeRange:CMTimeRangeMake(kCMTimeZero, mutableComposition.duration)];
+    // Attach the input parameters to the audio mix.
+    mutableAudioMix.inputParameters = @[mixParameters];
+    
+    AVMutableVideoCompositionInstruction *mutableVideoCompositionInstruction = [AVMutableVideoCompositionInstruction videoCompositionInstruction];
+    mutableVideoCompositionInstruction.timeRange = CMTimeRangeMake(kCMTimeZero, mutableComposition.duration);
+    mutableVideoCompositionInstruction.backgroundColor = [[UIColor redColor] CGColor];
+    
+    
+    
+}
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
+    
+    NSLog(@"变化内容%@",context);
 }
 - (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section {
     
