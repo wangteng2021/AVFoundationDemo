@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		6B10494128DFE1B8005DFF98 /* 123.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 6B10494028DFE1B8005DFF98 /* 123.mp4 */; };
+		6B10495628E1330F005DFF98 /* 456.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 6B10495528E1330F005DFF98 /* 456.mp4 */; };
 		6B8548FD28DDB2FF00B42C54 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B8548FC28DDB2FF00B42C54 /* AppDelegate.m */; };
 		6B85490028DDB2FF00B42C54 /* SceneDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B8548FF28DDB2FF00B42C54 /* SceneDelegate.m */; };
 		6B85490328DDB2FF00B42C54 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6B85490228DDB2FF00B42C54 /* ViewController.m */; };
@@ -20,6 +21,7 @@
 
 /* Begin PBXFileReference section */
 		6B10494028DFE1B8005DFF98 /* 123.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = 123.mp4; sourceTree = "<group>"; };
+		6B10495528E1330F005DFF98 /* 456.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = 456.mp4; sourceTree = "<group>"; };
 		6B8548F828DDB2FF00B42C54 /* AVFoundationDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AVFoundationDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6B8548FB28DDB2FF00B42C54 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		6B8548FC28DDB2FF00B42C54 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -66,6 +68,7 @@
 		6B8548FA28DDB2FF00B42C54 /* AVFoundationDemo */ = {
 			isa = PBXGroup;
 			children = (
+				6B10495528E1330F005DFF98 /* 456.mp4 */,
 				6B10494028DFE1B8005DFF98 /* 123.mp4 */,
 				6B8548FB28DDB2FF00B42C54 /* AppDelegate.h */,
 				6B8548FC28DDB2FF00B42C54 /* AppDelegate.m */,
@@ -143,6 +146,7 @@
 			files = (
 				6B10494128DFE1B8005DFF98 /* 123.mp4 in Resources */,
 				6B85490B28DDB30100B42C54 /* LaunchScreen.storyboard in Resources */,
+				6B10495628E1330F005DFF98 /* 456.mp4 in Resources */,
 				6B85490828DDB30100B42C54 /* Assets.xcassets in Resources */,
 				6B85490628DDB2FF00B42C54 /* Main.storyboard in Resources */,
 			);
